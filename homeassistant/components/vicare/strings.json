@@ -612,7 +612,7 @@
       "description": "Sets a new schedule for the domestic hot water circulation pump.",
       "fields": {
         "schedule": {
-          "description": "JSON definition of a schedule. (e.g.: https://www.postman.com/vimicho/viessmann-api-public/request/hpbagam/set-heating-schedule)",
+          "description": "Schedule definition with time slots for each day of the week.",
           "name": "Schedule"
         }
       },
@@ -622,7 +622,7 @@
       "description": "Sets a new schedule for the domestic hot water time programme.",
       "fields": {
         "schedule": {
-          "description": "JSON definition of a schedule for DHW time programme.",
+          "description": "Schedule definition with time slots for each day of the week.",
           "name": "Schedule"
         }
       },

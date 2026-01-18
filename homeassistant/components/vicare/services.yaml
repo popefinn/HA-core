@@ -25,10 +25,19 @@ set_dhw_circulation_pump_schedule:
   fields:
     schedule:
       required: true
-      example: '{"mon":[{"start":"08:00","end":"22:00","mode":"on","position":0}]}'
+      example:
+        mon:
+          - start: "08:00"
+            end: "22:00"
+            mode: "on"
+            position: 0
+        tue:
+          - start: "08:00"
+            end: "22:00"
+            mode: "on"
+            position: 0
       selector:
-        text:
-          multiline: true
+        object:
 
 set_dhw_schedule:
   target:
@@ -38,7 +47,11 @@ set_dhw_schedule:
   fields:
     schedule:
       required: true
-      example: '{"mon":[{"start":"06:00","end":"22:00","mode":"on","position":0}]}'
+      example:
+        mon:
+          - start: "06:00"
+            end: "22:00"
+            mode: "on"
+            position: 0
       selector:
-        text:
-          multiline: true
+        object:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextlib import suppress
+from datetime import timedelta
 import logging
 from typing import Any
 
@@ -10,6 +11,7 @@ from PyViCare.PyViCareDevice import Device as PyViCareDevice
 from PyViCare.PyViCareDeviceConfig import PyViCareDeviceConfig
 from PyViCare.PyViCareHeatingDevice import HeatingCircuit as PyViCareHeatingCircuit
 from PyViCare.PyViCareUtils import (
+    PyViCareCommandError,
     PyViCareInvalidDataError,
     PyViCareNotSupportedFeatureError,
     PyViCareRateLimitError,
@@ -26,7 +28,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.json import json_loads_object
 
 from .entity import ViCareEntity
 from .types import ViCareConfigEntry, ViCareDevice
@@ -70,6 +71,227 @@ HA_TO_VICARE_HVAC_DHW = {
 }
 
 
+def _normalize_time_input(time_input: str | timedelta) -> str:
+    """Convert time input (string or timedelta) to HH:MM string format."""
+    if isinstance(time_input, timedelta):
+        # Convert timedelta to HH:MM format
+        total_seconds = int(time_input.total_seconds())
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
+        # Handle 24:00 case for end of day
+        if hours == 24 and minutes == 0:
+            return "24:00"
+        time_str = f"{hours:02d}:{minutes:02d}"
+    elif isinstance(time_input, str):
+        # Validate string format
+        if ":" not in time_input:
+            raise vol.Invalid(f"Invalid time format: {time_input}. Expected HH:MM")
+        try:
+            h, m = map(int, time_input.split(":"))
+            # Allow 24:00 as special case for end of day, otherwise 0-23
+            if h == 24 and m == 0:
+                time_str = "24:00"  # Valid end-of-day time
+            elif not (0 <= h <= 23 and 0 <= m <= 59):
+                raise vol.Invalid(
+                    f"Invalid time: {time_input}. Hours must be 0-23 (or 24:00 for end of day), minutes 0-59"
+                )
+            else:
+                time_str = f"{h:02d}:{m:02d}"
+        except ValueError as err:
+            raise vol.Invalid(
+                f"Invalid time format: {time_input}. Expected HH:MM"
+            ) from err
+    else:
+        raise vol.Invalid(f"Time must be string or timedelta, got {type(time_input)}")
+
+    # ViCare-specific validations
+    _validate_vicare_time_constraints(time_str)
+
+    return time_str
+
+
+def _validate_vicare_time_constraints(time_str: str) -> None:
+    """Validate ViCare-specific time constraints."""
+    if time_str == "24:00":
+        return  # 24:00 is always valid
+
+    h, m = map(int, time_str.split(":"))
+
+    # Check for 10-minute increments
+    if m % 10 != 0:
+        raise vol.Invalid(
+            f"Invalid time: {time_str}. ViCare only accepts 10-minute increments "
+            f"(e.g., 08:00, 08:10, 08:20, 08:30, 08:40, 08:50)"
+        )
+
+    # Check for times that round to midnight (00:00) and cause issues
+    # ViCare rounds to nearest 10-minute increment:
+    # - 23:55, 23:56, 23:57, 23:58, 23:59 → round UP to 00:00 (next day) ❌
+    # - 23:50, 23:51, 23:52, 23:53, 23:54 → round DOWN to 23:50 (same day) ✅
+    if h == 23 and m >= 55:
+        raise vol.Invalid(
+            f"Invalid time: {time_str}. ViCare rounds times 23:55-23:59 up to 00:00 "
+            f"(next day), which causes scheduling issues. Use 24:00 for end of day "
+            f"or 23:50 for the latest reliable time."
+        )
+
+
+def _validate_time_field(value):
+    """Validate and normalize time field."""
+    return _normalize_time_input(value)
+
+
+# Define schedule validation schema
+SCHEDULE_ENTRY_SCHEMA = vol.Schema(
+    {
+        vol.Required("start"): _validate_time_field,
+        vol.Required("end"): _validate_time_field,
+        vol.Required("mode"): vol.In(["on"]),
+        vol.Required("position"): vol.All(
+            int, vol.Range(min=0, max=3)
+        ),  # 0-3 for 4 slots
+    }
+)
+
+
+# ViCare allows maximum 4 time entries per day
+def _validate_max_entries(entries):
+    """Validate maximum 4 entries per day."""
+    if len(entries) > 4:
+        raise vol.Invalid("Maximum 4 time entries allowed per day")
+    return entries
+
+
+SCHEDULE_SCHEMA = vol.Schema(
+    {
+        vol.Optional("mon", default=[]): vol.All(
+            [SCHEDULE_ENTRY_SCHEMA], _validate_max_entries
+        ),
+        vol.Optional("tue", default=[]): vol.All(
+            [SCHEDULE_ENTRY_SCHEMA], _validate_max_entries
+        ),
+        vol.Optional("wed", default=[]): vol.All(
+            [SCHEDULE_ENTRY_SCHEMA], _validate_max_entries
+        ),
+        vol.Optional("thu", default=[]): vol.All(
+            [SCHEDULE_ENTRY_SCHEMA], _validate_max_entries
+        ),
+        vol.Optional("fri", default=[]): vol.All(
+            [SCHEDULE_ENTRY_SCHEMA], _validate_max_entries
+        ),
+        vol.Optional("sat", default=[]): vol.All(
+            [SCHEDULE_ENTRY_SCHEMA], _validate_max_entries
+        ),
+        vol.Optional("sun", default=[]): vol.All(
+            [SCHEDULE_ENTRY_SCHEMA], _validate_max_entries
+        ),
+    }
+)
+
+
+def _validate_day_entries(day: str, entries: list[dict[str, Any]]) -> None:
+    """Validate entries for a single day."""
+    if len(entries) <= 1:
+        return
+
+    # Check for overlapping times
+    _check_overlapping_times(day, entries)
+
+    # Check for duplicate positions
+    _check_duplicate_positions(day, entries)
+
+
+def _check_overlapping_times(day: str, entries: list[dict[str, Any]]) -> None:
+    """Check for overlapping time slots in a day."""
+    for i, entry in enumerate(entries):
+        for other_entry in entries[i + 1 :]:  # Fixed: removed unused 'j' variable
+            if _times_overlap(entry, other_entry):
+                raise HomeAssistantError(
+                    f"Overlapping time slots found for {day}: "
+                    f"{entry['start']}-{entry['end']} and "
+                    f"{other_entry['start']}-{other_entry['end']}"
+                )
+
+
+def _check_duplicate_positions(day: str, entries: list[dict[str, Any]]) -> None:
+    """Check for duplicate position values in a day."""
+    positions = [entry["position"] for entry in entries]
+    if len(positions) != len(set(positions)):
+        raise HomeAssistantError(
+            f"Duplicate position values found for {day}. "
+            "Each time slot must have a unique position (0-3)."
+        )
+
+
+def _validate_schedule_format(schedule: dict[str, Any]) -> dict[str, Any]:
+    """Validate and normalize schedule format."""
+    # Check if user pasted JSON-like structure
+    if isinstance(schedule, str):
+        raise HomeAssistantError(
+            "Schedule must be in YAML format, not JSON string. "
+            "Remove quotes around the entire schedule."
+        )
+
+    try:
+        # Validate against schema (this will normalize time formats)
+        validated_schedule = SCHEDULE_SCHEMA(schedule)
+
+        # Additional validation: check for overlapping times and position conflicts
+        for day, entries in validated_schedule.items():
+            _validate_day_entries(day, entries)
+
+    except vol.Invalid as err:
+        # Convert voluptuous errors to user-friendly messages
+        error_msg = str(err)
+        if "Maximum 4 time entries allowed per day" in error_msg:
+            raise HomeAssistantError(
+                f"Too many time slots for {err.path[0] if err.path else 'a day'}. "
+                "ViCare allows maximum 4 time entries per day."
+            ) from err
+        if "ViCare only accepts 10-minute increments" in error_msg:
+            raise HomeAssistantError(f"Invalid time format: {error_msg}") from err
+        if "ViCare misinterprets this as 00:00" in error_msg:
+            raise HomeAssistantError(f"Time validation error: {error_msg}") from err
+        if "Times after 23:50 may cause issues" in error_msg:
+            raise HomeAssistantError(f"Time validation warning: {error_msg}") from err
+        if "required key not provided" in error_msg:
+            raise HomeAssistantError(
+                f"Missing required field in schedule: {err.path[-1]}. "
+                "Each time slot must have: start, end, mode, position"
+            ) from err
+        if "Invalid time format" in error_msg or "Invalid time:" in error_msg:
+            raise HomeAssistantError(
+                f"Invalid time format: {error_msg}. Use HH:MM format with 10-minute increments (e.g., '08:00', '08:10')"
+            ) from err
+        if "not a valid value" in error_msg and "mode" in str(err.path):
+            raise HomeAssistantError("Mode must be either 'on' or 'off'") from err
+        if "not in range" in error_msg and "position" in str(err.path):
+            raise HomeAssistantError(
+                "Position must be between 0 and 3 (ViCare supports 4 time slots per day)"
+            ) from err
+        raise HomeAssistantError(f"Invalid schedule format: {err}") from err
+    else:
+        return validated_schedule
+
+
+def _times_overlap(entry1: dict, entry2: dict) -> bool:
+    """Check if two time entries overlap."""
+
+    def time_to_minutes(time_str: str) -> int:
+        h, m = map(int, time_str.split(":"))
+        # Convert 24:00 to 1440 minutes (end of day)
+        if h == 24 and m == 0:
+            return 24 * 60  # 1440 minutes
+        return h * 60 + m
+
+    start1 = time_to_minutes(entry1["start"])
+    end1 = time_to_minutes(entry1["end"])
+    start2 = time_to_minutes(entry2["start"])
+    end2 = time_to_minutes(entry2["end"])
+
+    return not (end1 <= start2 or end2 <= start1)
+
+
 def _build_entities(
     device_list: list[ViCareDevice],
 ) -> list[ViCareWater]:
@@ -95,19 +317,24 @@ async def async_setup_entry(
     """Set up the ViCare water heater platform."""
     platform = entity_platform.async_get_current_platform()
 
+    # Use cv.make_entity_service_schema for proper validation【1】
     platform.async_register_entity_service(
         SERVICE_SET_DHW_CIRCULATION_PUMP_SCHEDULE,
-        {
-            vol.Required(
-                SERVICE_SET_DHW_CIRCULATION_PUMP_SCHEDULE_ATTR_SCHEDULE
-            ): cv.string
-        },
+        cv.make_entity_service_schema(
+            {
+                vol.Required(
+                    SERVICE_SET_DHW_CIRCULATION_PUMP_SCHEDULE_ATTR_SCHEDULE
+                ): SCHEDULE_SCHEMA
+            }
+        ),
         SERVICE_SET_DHW_CIRCULATION_PUMP_SCHEDULE,
     )
 
     platform.async_register_entity_service(
         SERVICE_SET_DHW_SCHEDULE,
-        {vol.Required(SERVICE_SET_DHW_SCHEDULE_ATTR_SCHEDULE): cv.string},
+        cv.make_entity_service_schema(
+            {vol.Required(SERVICE_SET_DHW_SCHEDULE_ATTR_SCHEDULE): SCHEDULE_SCHEMA}
+        ),
         SERVICE_SET_DHW_SCHEDULE,
     )
 
@@ -196,60 +423,80 @@ class ViCareWater(ViCareEntity, WaterHeaterEntity):
             return None
         return VICARE_TO_HA_HVAC_DHW.get(self._current_mode, None)
 
-    def set_dhw_circulation_pump_schedule(self, schedule) -> None:
+    def set_dhw_circulation_pump_schedule(self, schedule: dict[str, Any]) -> None:
         """Service function to set schedule for dhw circulation pump directly."""
+        # Validation already done by service registration schema
+        # Just call API directly since data is pre-validated
         try:
-            schedule_json = json_loads_object(schedule)
-        except Exception as error:
-            raise HomeAssistantError(error) from error
-        try:
-            self._api.setDomesticHotWaterCirculationSchedule(schedule_json)
+            self._api.setDomesticHotWaterCirculationSchedule(schedule)
+        except PyViCareCommandError as error:
+            _LOGGER.error("ViCare API command failed: %s", error)
+            if "VALIDATION_ERROR" in str(error):
+                raise HomeAssistantError(
+                    "ViCare API rejected the schedule format. Please check that all "
+                    "time slots have valid start/end times, don't overlap, and each day "
+                    "has maximum 4 time entries."
+                ) from error
+            raise HomeAssistantError(f"ViCare API error: {error}") from error
+        except PyViCareNotSupportedFeatureError as error:
+            _LOGGER.error("DHW circulation pump schedule not supported: %s", error)
+            raise HomeAssistantError(
+                "DHW circulation pump scheduling is not supported on this device"
+            ) from error
+        except PyViCareRateLimitError as error:
+            _LOGGER.error("ViCare API rate limit exceeded: %s", error)
+            raise HomeAssistantError(
+                f"ViCare API rate limit exceeded: {error}"
+            ) from error
+        except PyViCareInvalidDataError as error:
+            _LOGGER.error("Invalid schedule data: %s", error)
+            raise HomeAssistantError(f"Invalid schedule data: {error}") from error
         except requests.exceptions.ConnectionError as error:
-            _LOGGER.error("Unable to retrieve data from ViCare server")
+            _LOGGER.error("Unable to connect to ViCare server: %s", error)
             raise HomeAssistantError(
-                "Unable to retrieve data from ViCare server: {error}"
+                f"Unable to connect to ViCare server: {error}"
             ) from error
-        except PyViCareRateLimitError as limit_exception:
-            _LOGGER.error("Vicare API rate limit exceeded: %s", limit_exception)
-            raise HomeAssistantError(
-                "Vicare API rate limit exceeded: {error}"
-            ) from limit_exception
         except ValueError as error:
-            _LOGGER.error("Unable to decode data from ViCare server")
+            _LOGGER.error("Unable to decode data from ViCare server: %s", error)
             raise HomeAssistantError(
-                "Unable to decode data from ViCare server: {error}"
+                f"Unable to decode data from ViCare server: {error}"
             ) from error
-        except PyViCareInvalidDataError as invalid_data_exception:
-            _LOGGER.error("Invalid data from Vicare server: %s", invalid_data_exception)
-            raise HomeAssistantError(
-                "Invalid data from Vicare server: {error}"
-            ) from invalid_data_exception
 
-    def set_dhw_schedule(self, schedule) -> None:
+    def set_dhw_schedule(self, schedule: dict[str, Any]) -> None:
         """Service function to set schedule for dhw time programme directly."""
+        # Validation already done by service registration schema
+        # Just call API directly since data is pre-validated
         try:
-            schedule_json = json_loads_object(schedule)
-        except Exception as error:
-            raise HomeAssistantError(error) from error
-        try:
-            self._api.setDomesticHotWaterSchedule(schedule_json)
+            self._api.setDomesticHotWaterSchedule(schedule)
+        except PyViCareCommandError as error:
+            _LOGGER.error("ViCare API command failed: %s", error)
+            if "VALIDATION_ERROR" in str(error):
+                raise HomeAssistantError(
+                    "ViCare API rejected the schedule format. Please check that all "
+                    "time slots have valid start/end times, don't overlap, and each day "
+                    "has maximum 4 time entries."
+                ) from error
+            raise HomeAssistantError(f"ViCare API error: {error}") from error
+        except PyViCareNotSupportedFeatureError as error:
+            _LOGGER.error("DHW schedule not supported: %s", error)
+            raise HomeAssistantError(
+                "DHW time programme scheduling is not supported on this device"
+            ) from error
+        except PyViCareRateLimitError as error:
+            _LOGGER.error("ViCare API rate limit exceeded: %s", error)
+            raise HomeAssistantError(
+                f"ViCare API rate limit exceeded: {error}"
+            ) from error
+        except PyViCareInvalidDataError as error:
+            _LOGGER.error("Invalid schedule data: %s", error)
+            raise HomeAssistantError(f"Invalid schedule data: {error}") from error
         except requests.exceptions.ConnectionError as error:
-            _LOGGER.error("Unable to retrieve data from ViCare server")
+            _LOGGER.error("Unable to connect to ViCare server: %s", error)
             raise HomeAssistantError(
-                "Unable to retrieve data from ViCare server: {error}"
+                f"Unable to connect to ViCare server: {error}"
             ) from error
-        except PyViCareRateLimitError as limit_exception:
-            _LOGGER.error("Vicare API rate limit exceeded: %s", limit_exception)
-            raise HomeAssistantError(
-                "Vicare API rate limit exceeded: {error}"
-            ) from limit_exception
         except ValueError as error:
-            _LOGGER.error("Unable to decode data from ViCare server")
+            _LOGGER.error("Unable to decode data from ViCare server: %s", error)
             raise HomeAssistantError(
-                "Unable to decode data from ViCare server: {error}"
+                f"Unable to decode data from ViCare server: {error}"
             ) from error
-        except PyViCareInvalidDataError as invalid_data_exception:
-            _LOGGER.error("Invalid data from Vicare server: %s", invalid_data_exception)
-            raise HomeAssistantError(
-                "Invalid data from Vicare server: {error}"
-            ) from invalid_data_exception
