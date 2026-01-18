@@ -37,6 +37,9 @@ _LOGGER = logging.getLogger(__name__)
 SERVICE_SET_DHW_CIRCULATION_PUMP_SCHEDULE = "set_dhw_circulation_pump_schedule"
 SERVICE_SET_DHW_CIRCULATION_PUMP_SCHEDULE_ATTR_SCHEDULE = "schedule"
 
+SERVICE_SET_DHW_SCHEDULE = "set_dhw_schedule"
+SERVICE_SET_DHW_SCHEDULE_ATTR_SCHEDULE = "schedule"
+
 VICARE_MODE_DHW = "dhw"
 VICARE_MODE_HEATING = "heating"
 VICARE_MODE_DHWANDHEATING = "dhwAndHeating"
@@ -91,6 +94,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up the ViCare water heater platform."""
     platform = entity_platform.async_get_current_platform()
+
     platform.async_register_entity_service(
         SERVICE_SET_DHW_CIRCULATION_PUMP_SCHEDULE,
         {
@@ -99,6 +103,12 @@ async def async_setup_entry(
             ): cv.string
         },
         SERVICE_SET_DHW_CIRCULATION_PUMP_SCHEDULE,
+    )
+
+    platform.async_register_entity_service(
+        SERVICE_SET_DHW_SCHEDULE,
+        {vol.Required(SERVICE_SET_DHW_SCHEDULE_ATTR_SCHEDULE): cv.string},
+        SERVICE_SET_DHW_SCHEDULE,
     )
 
     async_add_entities(
@@ -149,6 +159,16 @@ class ViCareWater(ViCareEntity, WaterHeaterEntity):
             with suppress(PyViCareNotSupportedFeatureError):
                 self._current_mode = self._circuit.getActiveMode()
 
+            with suppress(PyViCareNotSupportedFeatureError):
+                circulation_schedule = (
+                    self._api.getDomesticHotWaterCirculationSchedule()
+                )
+                self._attributes["dhw_circulation_schedule"] = circulation_schedule
+
+            with suppress(PyViCareNotSupportedFeatureError):
+                dhw_schedule = self._api.getDomesticHotWaterSchedule()
+                self._attributes["dhw_time_programme"] = dhw_schedule
+
         except requests.exceptions.ConnectionError:
             _LOGGER.error("Unable to retrieve data from ViCare server")
         except PyViCareRateLimitError as limit_exception:
@@ -157,6 +177,11 @@ class ViCareWater(ViCareEntity, WaterHeaterEntity):
             _LOGGER.error("Unable to decode data from ViCare server")
         except PyViCareInvalidDataError as invalid_data_exception:
             _LOGGER.error("Invalid data from Vicare server: %s", invalid_data_exception)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return entity specific state attributes."""
+        return self._attributes
 
     def set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperatures."""
@@ -179,6 +204,35 @@ class ViCareWater(ViCareEntity, WaterHeaterEntity):
             raise HomeAssistantError(error) from error
         try:
             self._api.setDomesticHotWaterCirculationSchedule(schedule_json)
+        except requests.exceptions.ConnectionError as error:
+            _LOGGER.error("Unable to retrieve data from ViCare server")
+            raise HomeAssistantError(
+                "Unable to retrieve data from ViCare server: {error}"
+            ) from error
+        except PyViCareRateLimitError as limit_exception:
+            _LOGGER.error("Vicare API rate limit exceeded: %s", limit_exception)
+            raise HomeAssistantError(
+                "Vicare API rate limit exceeded: {error}"
+            ) from limit_exception
+        except ValueError as error:
+            _LOGGER.error("Unable to decode data from ViCare server")
+            raise HomeAssistantError(
+                "Unable to decode data from ViCare server: {error}"
+            ) from error
+        except PyViCareInvalidDataError as invalid_data_exception:
+            _LOGGER.error("Invalid data from Vicare server: %s", invalid_data_exception)
+            raise HomeAssistantError(
+                "Invalid data from Vicare server: {error}"
+            ) from invalid_data_exception
+
+    def set_dhw_schedule(self, schedule) -> None:
+        """Service function to set schedule for dhw time programme directly."""
+        try:
+            schedule_json = json_loads_object(schedule)
+        except Exception as error:
+            raise HomeAssistantError(error) from error
+        try:
+            self._api.setDomesticHotWaterSchedule(schedule_json)
         except requests.exceptions.ConnectionError as error:
             _LOGGER.error("Unable to retrieve data from ViCare server")
             raise HomeAssistantError(
