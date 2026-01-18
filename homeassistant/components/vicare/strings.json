@@ -608,6 +608,16 @@
     }
   },
   "services": {
+    "set_dhw_circulation_pump_schedule": {
+      "description": "Sets a new schedule for the domestic hot water circulation pump.",
+      "fields": {
+        "schedule": {
+          "description": "JSON definition of a schedule. (e.g.: https://www.postman.com/vimicho/viessmann-api-public/request/hpbagam/set-heating-schedule)",
+          "name": "Schedule"
+        }
+      },
+      "name": "Set DHW circulation schedule"
+    },
     "set_vicare_mode": {
       "description": "Sets the mode of the climate device as defined by Viessmann.",
       "fields": {
