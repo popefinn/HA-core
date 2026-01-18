@@ -24,7 +24,6 @@ from homeassistant.components.number import (
     NumberDeviceClass,
     NumberEntity,
     NumberEntityDescription,
-    NumberMode,
 )
 from homeassistant.const import EntityCategory, UnitOfTemperature
 from homeassistant.core import HomeAssistant
@@ -60,7 +59,6 @@ DEVICE_ENTITY_DESCRIPTIONS: tuple[ViCareNumberEntityDescription, ...] = (
         entity_category=EntityCategory.CONFIG,
         device_class=NumberDeviceClass.TEMPERATURE,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
-        mode=NumberMode.BOX,
         value_getter=lambda api: api.getDomesticHotWaterConfiguredTemperature(),
         value_setter=lambda api, value: api.setDomesticHotWaterTemperature(value),
         min_value_getter=lambda api: api.getDomesticHotWaterMinTemperature(),
@@ -73,7 +71,6 @@ DEVICE_ENTITY_DESCRIPTIONS: tuple[ViCareNumberEntityDescription, ...] = (
         entity_category=EntityCategory.CONFIG,
         device_class=NumberDeviceClass.TEMPERATURE,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
-        mode=NumberMode.BOX,
         value_getter=lambda api: api.getDomesticHotWaterConfiguredTemperature2(),
         value_setter=lambda api, value: api.setDomesticHotWaterTemperature2(value),
         # no getters for min, max, stepping exposed yet, using static values
@@ -87,7 +84,6 @@ DEVICE_ENTITY_DESCRIPTIONS: tuple[ViCareNumberEntityDescription, ...] = (
         entity_category=EntityCategory.CONFIG,
         device_class=NumberDeviceClass.TEMPERATURE,
         native_unit_of_measurement=UnitOfTemperature.KELVIN,
-        mode=NumberMode.BOX,
         value_getter=lambda api: api.getDomesticHotWaterHysteresisSwitchOn(),
         value_setter=lambda api, value: api.setDomesticHotWaterHysteresisSwitchOn(
             value
@@ -102,7 +98,6 @@ DEVICE_ENTITY_DESCRIPTIONS: tuple[ViCareNumberEntityDescription, ...] = (
         entity_category=EntityCategory.CONFIG,
         device_class=NumberDeviceClass.TEMPERATURE,
         native_unit_of_measurement=UnitOfTemperature.KELVIN,
-        mode=NumberMode.BOX,
         value_getter=lambda api: api.getDomesticHotWaterHysteresisSwitchOff(),
         value_setter=lambda api, value: api.setDomesticHotWaterHysteresisSwitchOff(
             value
@@ -121,7 +116,6 @@ CIRCUIT_ENTITY_DESCRIPTIONS: tuple[ViCareNumberEntityDescription, ...] = (
         entity_category=EntityCategory.CONFIG,
         device_class=NumberDeviceClass.TEMPERATURE,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
-        mode=NumberMode.BOX,
         value_getter=lambda api: api.getHeatingCurveShift(),
         value_setter=lambda api, shift: (
             api.setHeatingCurve(shift, api.getHeatingCurveSlope())
@@ -137,7 +131,6 @@ CIRCUIT_ENTITY_DESCRIPTIONS: tuple[ViCareNumberEntityDescription, ...] = (
         key="heating curve slope",
         translation_key="heating_curve_slope",
         entity_category=EntityCategory.CONFIG,
-        mode=NumberMode.BOX,
         value_getter=lambda api: api.getHeatingCurveSlope(),
         value_setter=lambda api, slope: (
             api.setHeatingCurve(api.getHeatingCurveShift(), slope)
@@ -155,7 +148,6 @@ CIRCUIT_ENTITY_DESCRIPTIONS: tuple[ViCareNumberEntityDescription, ...] = (
         entity_category=EntityCategory.CONFIG,
         device_class=NumberDeviceClass.TEMPERATURE,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
-        mode=NumberMode.BOX,
         value_getter=lambda api: api.getDesiredTemperatureForProgram(
             HeatingProgram.NORMAL
         ),
@@ -176,7 +168,6 @@ CIRCUIT_ENTITY_DESCRIPTIONS: tuple[ViCareNumberEntityDescription, ...] = (
         entity_category=EntityCategory.CONFIG,
         device_class=NumberDeviceClass.TEMPERATURE,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
-        mode=NumberMode.BOX,
         value_getter=lambda api: api.getDesiredTemperatureForProgram(
             HeatingProgram.REDUCED
         ),
@@ -197,7 +188,6 @@ CIRCUIT_ENTITY_DESCRIPTIONS: tuple[ViCareNumberEntityDescription, ...] = (
         entity_category=EntityCategory.CONFIG,
         device_class=NumberDeviceClass.TEMPERATURE,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
-        mode=NumberMode.BOX,
         value_getter=lambda api: api.getDesiredTemperatureForProgram(
             HeatingProgram.COMFORT
         ),
@@ -218,7 +208,6 @@ CIRCUIT_ENTITY_DESCRIPTIONS: tuple[ViCareNumberEntityDescription, ...] = (
         entity_category=EntityCategory.CONFIG,
         device_class=NumberDeviceClass.TEMPERATURE,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
-        mode=NumberMode.BOX,
         value_getter=lambda api: api.getDesiredTemperatureForProgram(
             HeatingProgram.NORMAL_HEATING
         ),
@@ -241,7 +230,6 @@ CIRCUIT_ENTITY_DESCRIPTIONS: tuple[ViCareNumberEntityDescription, ...] = (
         entity_category=EntityCategory.CONFIG,
         device_class=NumberDeviceClass.TEMPERATURE,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
-        mode=NumberMode.BOX,
         value_getter=lambda api: api.getDesiredTemperatureForProgram(
             HeatingProgram.REDUCED_HEATING
         ),
@@ -264,7 +252,6 @@ CIRCUIT_ENTITY_DESCRIPTIONS: tuple[ViCareNumberEntityDescription, ...] = (
         entity_category=EntityCategory.CONFIG,
         device_class=NumberDeviceClass.TEMPERATURE,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
-        mode=NumberMode.BOX,
         value_getter=lambda api: api.getDesiredTemperatureForProgram(
             HeatingProgram.COMFORT_HEATING
         ),
@@ -287,7 +274,6 @@ CIRCUIT_ENTITY_DESCRIPTIONS: tuple[ViCareNumberEntityDescription, ...] = (
         entity_category=EntityCategory.CONFIG,
         device_class=NumberDeviceClass.TEMPERATURE,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
-        mode=NumberMode.BOX,
         value_getter=lambda api: api.getDesiredTemperatureForProgram(
             HeatingProgram.NORMAL_COOLING
         ),
@@ -310,7 +296,6 @@ CIRCUIT_ENTITY_DESCRIPTIONS: tuple[ViCareNumberEntityDescription, ...] = (
         entity_category=EntityCategory.CONFIG,
         device_class=NumberDeviceClass.TEMPERATURE,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
-        mode=NumberMode.BOX,
         value_getter=lambda api: api.getDesiredTemperatureForProgram(
             HeatingProgram.REDUCED_COOLING
         ),
@@ -333,7 +318,6 @@ CIRCUIT_ENTITY_DESCRIPTIONS: tuple[ViCareNumberEntityDescription, ...] = (
         entity_category=EntityCategory.CONFIG,
         device_class=NumberDeviceClass.TEMPERATURE,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
-        mode=NumberMode.BOX,
         value_getter=lambda api: api.getDesiredTemperatureForProgram(
             HeatingProgram.COMFORT_COOLING
         ),
