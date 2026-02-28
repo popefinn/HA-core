@@ -123,7 +123,12 @@ GLOBAL_SENSORS: tuple[ViCareSensorEntityDescription, ...] = (
             "climateCircuitOne": "climate_circuit_one",
             "climatCircuitTwoDefrost": "climate_circuit_two_defrost",
             "domesticHotWater": "domestic_hot_water",
-        }.get(pos := api.getFourThreeWayValvePosition(), pos),
+        }.get(
+            pos := api.getProperty("heating.valves.fourThreeWay.position")[
+                "properties"
+            ]["value"]["value"],
+            pos,
+        ),
     ),
     ViCareSensorEntityDescription(
         key="secondary_valve_current",
