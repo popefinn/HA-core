@@ -110,6 +110,49 @@ SUPPLY_TEMPERATURE_SENSOR: ViCareSensorEntityDescription = (
 
 GLOBAL_SENSORS: tuple[ViCareSensorEntityDescription, ...] = (
     ViCareSensorEntityDescription(
+        key="four_three_way_valve_position",
+        translation_key="four_three_way_valve_position",
+        device_class=SensorDeviceClass.ENUM,
+        options=[
+            "climate_circuit_one",
+            "climate_circuit_two_defrost",
+            "domestic_hot_water",
+            "standby",
+        ],
+        value_getter=lambda api: {
+            "climateCircuitOne": "climate_circuit_one",
+            "climatCircuitTwoDefrost": "climate_circuit_two_defrost",
+            "domesticHotWater": "domestic_hot_water",
+        }.get(pos := api.getFourThreeWayValvePosition(), pos),
+    ),
+    ViCareSensorEntityDescription(
+        key="secondary_valve_current",
+        translation_key="secondary_valve_current_position",
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=PERCENTAGE,
+        value_getter=lambda api: api.getProperty(
+            "heating.secondaryCircuit.valves.fourThreeWay"
+        )["properties"]["current"]["value"],
+    ),
+    ViCareSensorEntityDescription(
+        key="secondary_valve_target",
+        translation_key="secondary_valve_target_position",
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=PERCENTAGE,
+        value_getter=lambda api: api.getProperty(
+            "heating.secondaryCircuit.valves.fourThreeWay"
+        )["properties"]["target"]["value"],
+    ),
+    ViCareSensorEntityDescription(
+        key="secondary_circuit_operation_state",
+        translation_key="secondary_circuit_operation_state",
+        device_class=SensorDeviceClass.ENUM,
+        options=["cooling", "heating", "standby"],
+        value_getter=lambda api: api.getProperty(
+            "heating.secondaryCircuit.operation.state"
+        )["properties"]["currentValue"]["value"],
+    ),
+    ViCareSensorEntityDescription(
         key="outside_temperature",
         translation_key="outside_temperature",
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
@@ -534,7 +577,9 @@ GLOBAL_SENSORS: tuple[ViCareSensorEntityDescription, ...] = (
         key="power_production_current",
         translation_key="power_production_current",
         native_unit_of_measurement=UnitOfPower.WATT,
-        value_getter=lambda api: api.getPowerProductionCurrent(),
+        value_getter=lambda api: api.getProperty("heating.power.production.current")[
+            "properties"
+        ]["value"]["value"],
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
     ),
@@ -714,6 +759,93 @@ GLOBAL_SENSORS: tuple[ViCareSensorEntityDescription, ...] = (
         value_getter=lambda api: api.getBufferMainTemperature(),
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
+    ),
+    ViCareSensorEntityDescription(
+        key="buffer_cylinder_main_temperature",
+        translation_key="buffer_cylinder_main_temperature",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        value_getter=lambda api: api.getProperty(
+            "heating.bufferCylinder.sensors.temperature.main"
+        )["properties"]["value"]["value"],
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    ViCareSensorEntityDescription(
+        key="boiler_temperature_current",
+        translation_key="boiler_temperature_current",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        value_getter=lambda api: api.getProperty("heating.boiler.temperature.current")[
+            "properties"
+        ]["value"]["value"],
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    ViCareSensorEntityDescription(
+        key="internal_pump_speed",
+        translation_key="internal_pump_speed",
+        native_unit_of_measurement=PERCENTAGE,
+        value_getter=lambda api: api.getProperty(
+            "heating.boiler.pumps.internal.current"
+        )["properties"]["value"]["value"],
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    ViCareSensorEntityDescription(
+        key="internal_pump_speed_target",
+        translation_key="internal_pump_speed_target",
+        native_unit_of_measurement=PERCENTAGE,
+        value_getter=lambda api: api.getProperty(
+            "heating.boiler.pumps.internal.target"
+        )["properties"]["value"]["value"],
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_registry_enabled_default=False,
+    ),
+    ViCareSensorEntityDescription(
+        key="dhw_cylinder_temperature",
+        translation_key="dhw_cylinder_temperature",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        value_getter=lambda api: api.getProperty(
+            "heating.dhw.sensors.temperature.dhwCylinder"
+        )["properties"]["value"]["value"],
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    ViCareSensorEntityDescription(
+        key="system_temperature",
+        translation_key="system_temperature",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        value_getter=lambda api: api.getProperty(
+            "heating.sensors.temperature.allengra"
+        )["properties"]["value"]["value"],
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    ViCareSensorEntityDescription(
+        key="inverter_power_output",
+        translation_key="inverter_power_output",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        value_getter=lambda api: api.getProperty(
+            "heating.inverters.0.sensors.power.output"
+        )["properties"]["value"]["value"],
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    ViCareSensorEntityDescription(
+        key="outdoor_fan_speed",
+        translation_key="outdoor_fan_speed",
+        native_unit_of_measurement=PERCENTAGE,
+        value_getter=lambda api: api.getProperty(
+            "heating.primaryCircuit.fans.0.current"
+        )["properties"]["value"]["value"],
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    ViCareSensorEntityDescription(
+        key="seer_cooling",
+        translation_key="seer_cooling",
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_getter=lambda api: api.getProperty("heating.seer.cooling")["properties"][
+            "value"
+        ]["value"],
     ),
     ViCareSensorEntityDescription(
         key="volumetric_flow",
@@ -1234,6 +1366,38 @@ COMPRESSOR_SENSORS: tuple[ViCareSensorEntityDescription, ...] = (
         value_getter=lambda api: api.getCompressorOutletPressure(),
         unit_getter=lambda api: api.getCompressorOutletPressureUnit(),
         entity_registry_enabled_default=False,
+    ),
+    ViCareSensorEntityDescription(
+        key="compressor_motor_temperature",
+        translation_key="compressor_motor_temperature",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        value_getter=lambda api: api.getProperty(
+            f"heating.compressors.{api.compressor}.sensors.temperature.motorChamber"
+        )["properties"]["value"]["value"],
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_registry_enabled_default=False,
+    ),
+    ViCareSensorEntityDescription(
+        key="compressor_oil_temperature",
+        translation_key="compressor_oil_temperature",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        value_getter=lambda api: api.getProperty(
+            f"heating.compressors.{api.compressor}.sensors.temperature.oil"
+        )["properties"]["value"]["value"],
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_registry_enabled_default=False,
+    ),
+    ViCareSensorEntityDescription(
+        key="compressor_speed",
+        translation_key="compressor_speed",
+        native_unit_of_measurement=REVOLUTIONS_PER_MINUTE,
+        value_getter=lambda api: api.getProperty(
+            f"heating.compressors.{api.compressor}.speed.current"
+        )["properties"]["value"]["value"]
+        * 60,
+        state_class=SensorStateClass.MEASUREMENT,
     ),
 )
 

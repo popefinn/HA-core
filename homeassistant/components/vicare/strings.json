@@ -52,6 +52,15 @@
       "compressor": {
         "name": "Compressor"
       },
+      "compressor_crankcase_heater_active": {
+        "name": "Compressor crankcase heater"
+      },
+      "condensate_pan_active": {
+        "name": "Condensate pan"
+      },
+      "cooling_mode_active": {
+        "name": "Cooling mode"
+      },
       "domestic_hot_water_charging": {
         "name": "DHW charging"
       },
@@ -61,17 +70,38 @@
       "domestic_hot_water_pump": {
         "name": "DHW pump"
       },
+      "fan_ring_active": {
+        "name": "Fan ring"
+      },
       "frost_protection": {
         "name": "Frost protection"
       },
+      "heating_mode_active": {
+        "name": "Heating mode"
+      },
+      "heating_rod_active": {
+        "name": "Heating rod"
+      },
       "identification_mode": {
         "name": "Identification mode"
+      },
+      "internal_pump": {
+        "name": "Internal pump"
       },
       "mounting_mode": {
         "name": "Mounting mode"
       },
       "one_time_charge": {
         "name": "One-time charge"
+      },
+      "outdoor_defrosting": {
+        "name": "Outdoor unit defrosting"
+      },
+      "primary_valve_active": {
+        "name": "4/3-way valve"
+      },
+      "secondary_heat_generator_active": {
+        "name": "Secondary heat generator"
       },
       "solar_pump": {
         "name": "Solar pump"
@@ -167,8 +197,14 @@
       "boiler_temperature": {
         "name": "Boiler temperature"
       },
+      "boiler_temperature_current": {
+        "name": "Boiler current temperature"
+      },
       "buffer_bottom_temperature": {
         "name": "Buffer bottom temperature"
+      },
+      "buffer_cylinder_main_temperature": {
+        "name": "Buffer cylinder temperature"
       },
       "buffer_main_temperature": {
         "name": "Buffer main temperature"
@@ -221,6 +257,12 @@
       "compressor_inlet_temperature": {
         "name": "Compressor inlet temperature"
       },
+      "compressor_motor_temperature": {
+        "name": "Compressor motor temperature"
+      },
+      "compressor_oil_temperature": {
+        "name": "Compressor oil temperature"
+      },
       "compressor_outlet_pressure": {
         "name": "Compressor outlet pressure"
       },
@@ -241,6 +283,9 @@
           "ready": "[%key:common::state::idle%]"
         }
       },
+      "compressor_speed": {
+        "name": "Compressor speed"
+      },
       "compressor_starts": {
         "name": "Compressor starts"
       },
@@ -249,6 +294,9 @@
       },
       "condenser_subcooling_temperature": {
         "name": "Condenser subcooling temperature"
+      },
+      "dhw_cylinder_temperature": {
+        "name": "DHW cylinder temperature"
       },
       "dhw_storage_bottom_temperature": {
         "name": "DHW storage bottom temperature"
@@ -338,6 +386,15 @@
       },
       "filter_remaining_hours": {
         "name": "Filter remaining hours"
+      },
+      "four_three_way_valve_position": {
+        "name": "4/3-way valve position",
+        "state": {
+          "climate_circuit_one": "Heating circuit",
+          "climate_circuit_two_defrost": "Defrost",
+          "domestic_hot_water": "Domestic hot water",
+          "standby": "Standby"
+        }
       },
       "fuel_need": {
         "name": "Fuel need"
@@ -432,6 +489,18 @@
       "hydraulic_separator_temperature": {
         "name": "Hydraulic separator temperature"
       },
+      "internal_pump_speed": {
+        "name": "Internal pump speed"
+      },
+      "internal_pump_speed_target": {
+        "name": "Internal pump target speed"
+      },
+      "inverter_power_output": {
+        "name": "Inverter power output"
+      },
+      "outdoor_fan_speed": {
+        "name": "Outdoor unit fan speed"
+      },
       "outside_humidity": {
         "name": "Outside humidity"
       },
@@ -508,11 +577,28 @@
       "return_temperature": {
         "name": "Return temperature"
       },
+      "secondary_circuit_operation_state": {
+        "name": "Secondary circuit operation state",
+        "state": {
+          "cooling": "[%key:component::climate::entity_component::_::state_attributes::hvac_action::state::cooling%]",
+          "heating": "[%key:component::climate::entity_component::_::state_attributes::hvac_action::state::heating%]",
+          "standby": "[%key:common::state::standby%]"
+        }
+      },
       "secondary_circuit_return_temperature": {
         "name": "Secondary circuit return temperature"
       },
       "secondary_circuit_supply_temperature": {
         "name": "Secondary circuit supply temperature"
+      },
+      "secondary_valve_current_position": {
+        "name": "Secondary valve current position"
+      },
+      "secondary_valve_target_position": {
+        "name": "Secondary valve target position"
+      },
+      "seer_cooling": {
+        "name": "SEER cooling efficiency"
       },
       "solar_power_production_this_month": {
         "name": "Solar energy production this month"
@@ -552,6 +638,9 @@
       },
       "supply_temperature": {
         "name": "Supply temperature"
+      },
+      "system_temperature": {
+        "name": "System temperature"
       },
       "valve_position": {
         "name": "Valve position"

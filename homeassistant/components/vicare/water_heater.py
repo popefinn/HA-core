@@ -350,7 +350,10 @@ class ViCareWater(ViCareEntity, WaterHeaterEntity):
     """Representation of the ViCare domestic hot water device."""
 
     _attr_precision = PRECISION_TENTHS
-    _attr_supported_features = WaterHeaterEntityFeature.TARGET_TEMPERATURE
+    _attr_supported_features = (
+        WaterHeaterEntityFeature.TARGET_TEMPERATURE
+        | WaterHeaterEntityFeature.OPERATION_MODE
+    )
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_min_temp = VICARE_TEMP_WATER_MIN
     _attr_max_temp = VICARE_TEMP_WATER_MAX
@@ -467,7 +470,9 @@ class ViCareWater(ViCareEntity, WaterHeaterEntity):
         # Validation already done by service registration schema
         # Just call API directly since data is pre-validated
         try:
-            self._api.setDomesticHotWaterSchedule(schedule)
+            self._api.setProperty(
+                "heating.dhw.schedule", "setSchedule", {"newSchedule": schedule}
+            )
         except PyViCareCommandError as error:
             _LOGGER.error("ViCare API command failed: %s", error)
             if "VALIDATION_ERROR" in str(error):
