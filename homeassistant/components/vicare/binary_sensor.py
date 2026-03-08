@@ -75,6 +75,15 @@ COMPRESSOR_SENSORS: tuple[ViCareBinarySensorEntityDescription, ...] = (
         device_class=BinarySensorDeviceClass.RUNNING,
         value_getter=lambda api: api.getActive(),
     ),
+    ViCareBinarySensorEntityDescription(
+        key="compressor_crankcase_heater_active",
+        translation_key="compressor_crankcase_heater_active",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_getter=lambda api: api.getProperty(
+            f"heating.compressors.{api.compressor}.heater.crankcase"
+        )["properties"]["active"]["value"],
+        entity_registry_enabled_default=False,
+    ),
 )
 
 GLOBAL_SENSORS: tuple[ViCareBinarySensorEntityDescription, ...] = (
@@ -138,6 +147,47 @@ GLOBAL_SENSORS: tuple[ViCareBinarySensorEntityDescription, ...] = (
         translation_key="valve",
         device_class=BinarySensorDeviceClass.DOOR,
         value_getter=lambda api: api.isValveOpen(),
+    ),
+    ViCareBinarySensorEntityDescription(
+        key="outdoor_defrosting",
+        translation_key="outdoor_defrosting",
+        device_class=BinarySensorDeviceClass.RUNNING,
+        value_getter=lambda api: api.getProperty("heating.outdoor.defrosting")[
+            "properties"
+        ]["active"]["value"],
+    ),
+    ViCareBinarySensorEntityDescription(
+        key="heating_rod_active",
+        translation_key="heating_rod_active",
+        device_class=BinarySensorDeviceClass.RUNNING,
+        value_getter=lambda api: api.getProperty("heating.heatingRod")["properties"][
+            "active"
+        ]["value"],
+    ),
+    ViCareBinarySensorEntityDescription(
+        key="condensate_pan_active",
+        translation_key="condensate_pan_active",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_getter=lambda api: api.getProperty("heating.heater.condensatePan")[
+            "properties"
+        ]["active"]["value"],
+        entity_registry_enabled_default=False,
+    ),
+    ViCareBinarySensorEntityDescription(
+        key="fan_ring_active",
+        translation_key="fan_ring_active",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_getter=lambda api: api.getProperty("heating.heater.fanRing")[
+            "properties"
+        ]["active"]["value"],
+        entity_registry_enabled_default=False,
+    ),
+    ViCareBinarySensorEntityDescription(
+        key="secondary_heat_generator_active",
+        translation_key="secondary_heat_generator_active",
+        value_getter=lambda api: api.getProperty("heating.secondaryHeatGenerator")[
+            "properties"
+        ]["active"]["value"],
     ),
     ViCareBinarySensorEntityDescription(
         key="ventilation_frost_protection",
