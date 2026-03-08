@@ -99,6 +99,9 @@ def is_supported(
     except AttributeError as error:
         _LOGGER.debug("Feature not supported %s: %s", name, error)
         return False
+    except KeyError as error:
+        _LOGGER.debug("Feature not supported %s: %s", name, error)
+        return False
     _LOGGER.debug("Found entity %s", name)
     return True
 
