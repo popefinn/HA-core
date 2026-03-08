@@ -16,3 +16,42 @@ set_vicare_mode:
             - "forcedReduced"
             - "heating"
             - "standby"
+
+set_dhw_circulation_pump_schedule:
+  target:
+    entity:
+      integration: vicare
+      domain: water_heater
+  fields:
+    schedule:
+      required: true
+      example:
+        mon:
+          - start: "08:00"
+            end: "22:00"
+            mode: "on"
+            position: 0
+        tue:
+          - start: "08:00"
+            end: "22:00"
+            mode: "on"
+            position: 0
+      selector:
+        object:
+
+set_dhw_schedule:
+  target:
+    entity:
+      integration: vicare
+      domain: water_heater
+  fields:
+    schedule:
+      required: true
+      example:
+        mon:
+          - start: "06:00"
+            end: "22:00"
+            mode: "on"
+            position: 0
+      selector:
+        object:
