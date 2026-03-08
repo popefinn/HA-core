@@ -4710,6 +4710,43 @@
             'timestamp': '2021-08-25T03:29:46.401Z',
             'uri': 'https://api.viessmann-platform.io/iot/v1/equipment/installations/######/gateways/################/devices/0/features/heating.circuits.1.operating.modes',
           }),
+          dict({
+            'apiVersion': 1,
+            'commands': dict({
+              'setMode': dict({
+                'isExecutable': True,
+                'name': 'setMode',
+                'params': dict({
+                  'mode': dict({
+                    'constraints': dict({
+                      'enum': list([
+                        'comfort',
+                        'eco',
+                      ]),
+                    }),
+                    'required': True,
+                    'type': 'string',
+                  }),
+                }),
+                'uri': 'https://api.viessmann-platform.io/iot/v1/equipment/installations/######/gateways/################/devices/0/features/heating.dhw.operating.modes.active/commands/setMode',
+              }),
+            }),
+            'components': list([
+            ]),
+            'deviceId': '0',
+            'feature': 'heating.dhw.operating.modes.active',
+            'gatewayId': '################',
+            'isEnabled': True,
+            'isReady': True,
+            'properties': dict({
+              'value': dict({
+                'type': 'string',
+                'value': 'comfort',
+              }),
+            }),
+            'timestamp': '2021-08-25T03:29:47.654Z',
+            'uri': 'https://api.viessmann-platform.io/iot/v1/equipment/installations/######/gateways/################/devices/0/features/heating.dhw.operating.modes.active',
+          }),
         ]),
       }),
     ]),

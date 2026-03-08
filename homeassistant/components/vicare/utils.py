@@ -90,7 +90,7 @@ def is_supported(
     except PyViCareNotSupportedFeatureError:
         _LOGGER.debug("Feature not supported %s", name)
         return False
-    except AttributeError as error:
+    except (AttributeError, KeyError) as error:
         _LOGGER.debug("Feature not supported %s: %s", name, error)
         return False
     _LOGGER.debug("Found entity %s", name)

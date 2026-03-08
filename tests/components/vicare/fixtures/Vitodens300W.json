@@ -3897,6 +3897,39 @@
       "isEnabled": true,
       "isReady": true,
       "deviceId": "0"
+    },
+    {
+      "properties": {
+        "value": {
+          "value": "comfort",
+          "type": "string"
+        }
+      },
+      "commands": {
+        "setMode": {
+          "uri": "https://api.viessmann-platform.io/iot/v1/equipment/installations/######/gateways/################/devices/0/features/heating.dhw.operating.modes.active/commands/setMode",
+          "name": "setMode",
+          "isExecutable": true,
+          "params": {
+            "mode": {
+              "type": "string",
+              "required": true,
+              "constraints": {
+                "enum": ["comfort", "eco"]
+              }
+            }
+          }
+        }
+      },
+      "components": [],
+      "apiVersion": 1,
+      "uri": "https://api.viessmann-platform.io/iot/v1/equipment/installations/######/gateways/################/devices/0/features/heating.dhw.operating.modes.active",
+      "gatewayId": "################",
+      "feature": "heating.dhw.operating.modes.active",
+      "timestamp": "2021-08-25T03:29:47.654Z",
+      "isEnabled": true,
+      "isReady": true,
+      "deviceId": "0"
     }
   ]
 }
